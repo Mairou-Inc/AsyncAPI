@@ -3,29 +3,42 @@ import argparse
 import requests
 import jinja2
 import aiohttp_jinja2
+import json
 
 
 WEATHER_TOKEN = 'e8cff88ed93e33fb6905387cb4221c6f'
 URL_WEATHER_SERVICE = 'https://api.openweathermap.org/data/2.5/weather'
 
 IP_INFO_TOKEN = '0ecd21b12bf3bf'
-URL_IP_INFO = 'https://ipinfo.io'
+URL_IP_INFO = 'https://ipinfo.io/'
 
+URL_EXCHANGE_RATES = 'https://api.exchangeratesapi.io/latest'
+
+"""----------------------------------------------"""
 
 parser = argparse.ArgumentParser(description='aiohttp server')
 parser.add_argument('--port')
 args = parser.parse_args()
 
+"""----------------------------------------------"""
 
 def get_request_to_weather_api(remote_ip_address):
-    city=get_user_data_ip(remote_ip_address)
+    city=get_user_data_ip(remote_ip_address)['city']
     parameters = {'TOKEN':WEATHER_TOKEN, 'CITY':city}
     return requests.get(URL_WEATHER_SERVICE, params=parameters).text
 
+def get_remote_ip(request):
+    return request.headers.get('X-FORWARDED-FOR')
+
 def get_user_data_ip(remote_ip_address):
-    parameters = {'TOKEN': IP_INFO_TOKEN, 'IP':remote_ip_address}
-    return requests.get(URL_IP_INFO, params=parameters).text
+    parameters = {'TOKEN': IP_INFO_TOKEN}
+    return json.loads(requests.get((URL_IP_INFO + remote_ip_address), params=parameters).text)
     
+def request_to_exchange_rates_api(exchange):
+    parameters = {'base': exchange}
+    return json.loads(requests.get(URL_EXCHANGE_RATES, params=parameters).text)
+
+"""----------------------------------------------"""
 
 async def mainpage(request):
     context = {'fake_token':'shgeirughberiuhgbaigbewigu'}
@@ -39,7 +52,7 @@ async def mainpage(request):
 
 async def test(request):
     name = request.rel_url.query.get('name')
-    remote_ip_address = request.headers.get('X-FORWRDED_FOR')
+    remote_ip_address = get_remote_ip(request)
     ip_data = get_user_data_ip(remote_ip_address)
     weather_data = get_request_to_weather_api(remote_ip_address)
     return web.Response(text=f"{request.rel_url.query_string}, {remote_ip_address}, {ip_data}, {weather_data}")
@@ -55,15 +68,17 @@ async def exponentiation(request):
 
 async def weather(request):
     return web.Response(
-        text=get_request_to_weather_api(),
+        text=get_request_to_weather_api(get_remote_ip(request)),
         content_type='text/plain',
         charset='utf-8'
     )
   
 
 async def exchange(request):
-    return web.json_response
+    exchange = request.rel_url.query.get('exchange')
+    return web.json_response(request_to_exchange_rates_api(exchange))
 
+"""----------------------------------------------"""
 
 app = web.Application()
 
