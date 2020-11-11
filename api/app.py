@@ -7,7 +7,7 @@ import json
 
 
 WEATHER_TOKEN = 'e8cff88ed93e33fb6905387cb4221c6f'
-URL_WEATHER_SERVICE = 'https://api.openweathermap.org/data/2.5/weather'
+URL_WEATHER_SERVICE = 'http://api.openweathermap.org/data/2.5/weather'
 
 IP_INFO_TOKEN = '0ecd21b12bf3bf'
 URL_IP_INFO = 'https://ipinfo.io/'
@@ -22,10 +22,10 @@ args = parser.parse_args()
 
 """----------------------------------------------"""
 
-def get_request_to_weather_api(remote_ip_address):
+def request_to_weather_api(remote_ip_address):
     city=get_user_data_ip(remote_ip_address)['city']
-    parameters = {'TOKEN':WEATHER_TOKEN, 'CITY':city}
-    return requests.get(URL_WEATHER_SERVICE, params=parameters).text
+    parameters = {'q':city, 'appid':WEATHER_TOKEN, 'units':'metric'}
+    return json.loads(requests.get(URL_WEATHER_SERVICE, params=parameters).text)
 
 def get_remote_ip(request):
     return request.headers.get('X-FORWARDED-FOR')
@@ -43,7 +43,7 @@ def request_to_exchange_rates_api(exchange):
 async def mainpage(request):
     context = {'fake_token':'shgeirughberiuhgbaigbewigu'}
     response = aiohttp_jinja2.render_template(
-        'index.html',
+        '/home/www/code/AsyncAPI/api/templates/index.html',
         request,
         context
     )
@@ -54,7 +54,7 @@ async def test(request):
     name = request.rel_url.query.get('name')
     remote_ip_address = get_remote_ip(request)
     ip_data = get_user_data_ip(remote_ip_address)
-    weather_data = get_request_to_weather_api(remote_ip_address)
+    weather_data = request_to_weather_api(remote_ip_address)
     return web.Response(text=f"{request.rel_url.query_string}, {remote_ip_address}, {ip_data}, {weather_data}")
 
 
@@ -67,11 +67,7 @@ async def exponentiation(request):
         return web.json_response({'error':'not enough parameters'})
 
 async def weather(request):
-    return web.Response(
-        text=get_request_to_weather_api(get_remote_ip(request)),
-        content_type='text/plain',
-        charset='utf-8'
-    )
+    return web.json_response(request_to_weather_api(get_remote_ip(request)))
   
 
 async def exchange(request):
