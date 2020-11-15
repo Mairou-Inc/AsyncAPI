@@ -43,7 +43,7 @@ def request_to_exchange_rates_api(exchange):
 async def mainpage(request):
     context = {'fake_token':'shgeirughberiuhgbaigbewigu'}
     response = aiohttp_jinja2.render_template(
-        '/home/www/code/AsyncAPI/api/templates/index.html',
+        'index.html',
         request,
         context
     )
@@ -79,7 +79,8 @@ async def exchange(request):
 app = web.Application()
 
 aiohttp_jinja2.setup(app,
-    loader=jinja2.FileSystemLoader('api/templates'))
+    loader=jinja2.FileSystemLoader('/home/www/code/AsyncAPI/api/templates'))
+
 
 app.add_routes([
     web.get('/', mainpage),
